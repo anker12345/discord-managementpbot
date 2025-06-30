@@ -1,6 +1,8 @@
 # Discordサーバー管理Bot (Discord Server Management Bot)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Discord.py](https://img.shields.io/badge/discord.py-2.3.0+-blue.svg)](https://discordpy.readthedocs.io/en/stable/)
 
 サーバーの初期構築から日々のロール管理、セキュリティ維持までを1つのBotで実現するための、多機能・高効率なDiscord Botです。
 
@@ -25,38 +27,43 @@
 
 ## 🚀 導入方法 (Installation)
 
-1.  **リポジトリをクローン**
-    ```bash
-    git clone https://github.com/anker12345/discord-managementpbot.git
-    cd discord-managementpbot
-    ```
+### 1. リポジトリをクローン
+```bash
+git clone https://github.com/anker12345/discord-managementpbot.git
+cd discord-managementpbot
+```
 
-2.  **必要なライブラリをインストール**
-    `requirements.txt`を作成し、必要なライブラリを記述してから、以下のコマンドを実行してください。
-    ```bash
-    pip install -r requirements.txt
-    ```
-    (例: `discord.py`, `PyYAML` など)
+### 2. 必要なライブラリをインストール
+```bash
+pip install -r requirements.txt
+```
 
-3.  **Discord Botのトークンを取得**
-    [Discord Developer Portal](https://discord.com/developers/applications) でアプリケーションを作成し、Botを有効化してTOKENをコピーします。
+### 3. Discord Botのトークンを取得
+[Discord Developer Portal](https://discord.com/developers/applications) でアプリケーションを作成し、Botを有効化してTOKENをコピーします。
 
-4.  **設定ファイルの準備**
-    `.env`ファイルを作成し、取得したBotトークンを記述します。
-    ```
-    # .env
-    DISCORD_BOT_TOKEN="ここにあなたのBotトークンを貼り付け"
-    ```
-    `config.yaml`ファイルを作成し、後述する[設定](#⚙️-設定-configyaml)を記述します。
+### 4. 設定ファイルの準備
+`.env`ファイルを作成し、取得したBotトークンを記述します。
+```bash
+cp .env.example .env
+# .env ファイルを編集してBotトークンを設定
+```
 
-5.  **Botを起動**
-    ```bash
-    python main.py
-    ```
+`config.yaml`ファイルを作成し、[設定例](#⚙️-設定-configyaml)を参考に記述します。
+```bash
+cp templates/example_config.yaml config.yaml
+# config.yaml ファイルを編集してサーバー設定を調整
+```
+
+### 5. Botを起動
+```bash
+python main.py
+```
 
 ## ⚙️ 設定 (`config.yaml`)
 
-Botの動作は `config.yaml` ファイルで制御されます。以下は設定例です。
+Botの動作は `config.yaml` ファイルで制御されます。詳細な設定例は [templates/example_config.yaml](templates/example_config.yaml) をご覧ください。
+
+### 基本構造
 
 ```yaml
 # サーバー名（ドキュメント用）
@@ -88,8 +95,6 @@ channels:
             allow: ["view_channel", "read_message_history"]
           - role: "@everyone"
             deny: ["view_channel"]
-      - name: "ロール選択"
-        type: "text"
 
 # ウェルカムゲート機能の設定
 welcome_gate:
@@ -105,7 +110,7 @@ welcome_gate:
 logging:
   enabled: true
   log_channel: "監査ログ"
-  auto_delete_days: 7 # 7日経過したログは自動削除
+  auto_delete_days: 7
   events:
     - "message_delete"
     - "message_edit"
@@ -119,17 +124,109 @@ logging:
 
 | コマンド | 説明 |
 | :--- | :--- |
-| `/setup` | `config.yaml`に基づきサーバー全体（チャンネル、基幹ロール）を構築・再構築します。 |
-| `/template save <名前>` | 現在のサーバー構成を`config.yaml`形式で出力します。 |
+| `/setup [force]` | `config.yaml`に基づきサーバー全体（チャンネル、基幹ロール）を構築・再構築します。 |
+| `/template save <名前>` | 現在のサーバー構成を`config.yaml`形式で保存します。 |
+| `/template export [名前]` | 現在のサーバー構成をYAMLファイルとして出力します。 |
 
 ### サブロールとリアクションロール管理
 
 | コマンド | 説明 |
 | :--- | :--- |
 | `/role create <名前> [色]` | 権限を持たない**サブロール**を1つ作成します。（例: `/role create ゲーム好き #3498db`） |
-| `/rr add <メッセージID> <絵文字> <ロール名>` | 指定したメッセージに、リアクションと**サブロール**の紐付けを追加します。 |
+| `/role delete <ロール>` | 指定した**サブロール**を削除します。 |
+| `/role list` | サーバー内のサブロール一覧を表示します。 |
+| `/role info <ロール>` | 指定したロールの詳細情報を表示します。 |
+| `/rr add <メッセージID> <絵文字> <ロール>` | 指定したメッセージに、リアクションと**サブロール**の紐付けを追加します。 |
 | `/rr remove <メッセージID> <絵文字>` | 設定済みのリアクションロールの紐付けを解除します。 |
 | `/rr list` | 設定されているリアクションロールの一覧を表示します。 |
+| `/rr clear <メッセージID>` | 指定したメッセージのリアクションロールをすべて削除します。 |
+
+## 🏗️ プロジェクト構成 (Project Structure)
+
+```
+discord-managementbot/
+├── README.md
+├── requirements.txt
+├── .env.example
+├── .gitignore
+├── main.py                    # メインエントリーポイント
+├── config.yaml               # Bot設定ファイル
+├── config/                   # 設定管理
+│   ├── __init__.py
+│   ├── config_loader.py     # 設定ファイル読み込み
+│   └── permissions.py       # 権限セット定義
+├── bot/                      # Botコア
+│   ├── __init__.py
+│   └── bot.py               # メインBotクラス
+├── cogs/                     # 機能別コマンド群
+│   ├── __init__.py
+│   ├── setup.py            # サーバーセットアップ
+│   ├── role_management.py  # ロール管理
+│   ├── reaction_roles.py   # リアクションロール
+│   ├── template.py         # テンプレート機能
+│   └── logging.py          # ログ機能
+├── database/                 # データベース
+│   ├── __init__.py
+│   ├── models.py           # データモデル
+│   └── database.py         # データベース操作
+├── utils/                    # ユーティリティ
+│   ├── __init__.py
+│   ├── helpers.py          # ヘルパー関数
+│   ├── validators.py       # バリデーション
+│   └── logger.py           # ログ設定
+├── templates/                # 設定テンプレート
+│   └── example_config.yaml
+└── logs/                     # ログ出力先
+    └── .gitkeep
+```
+
+## 🔧 環境変数 (Environment Variables)
+
+`.env` ファイルで以下の設定を行います：
+
+```bash
+# Discord Bot Token（必須）
+DISCORD_BOT_TOKEN=your_bot_token_here
+
+# データベース設定
+DATABASE_URL=discord_bot.db
+
+# ログレベル (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+LOG_LEVEL=INFO
+
+# 開発用ギルドID（オプション）
+DEV_GUILD_ID=
+```
+
+## 📋 必要な権限 (Required Permissions)
+
+Botが正常に動作するためには、以下の権限が必要です：
+
+### 基本権限
+- **ロールの管理**: サブロールの作成・削除
+- **チャンネルの管理**: チャンネルとカテゴリの作成・編集
+- **メッセージの管理**: ログ機能での履歴確認
+- **リアクションの追加**: リアクションロール機能
+
+### 推奨権限
+- **管理者**: サーバーセットアップ機能を使用する場合
+- **監査ログの表示**: ログ機能での詳細な監視
+
+## 🛠️ 開発・カスタマイズ (Development)
+
+### 新しい機能の追加
+
+1. `cogs/` ディレクトリに新しいCogファイルを作成
+2. `bot/bot.py` の `setup_hook()` メソッドで新しいCogを読み込み
+3. 必要に応じて `database/models.py` にデータモデルを追加
+
+### 権限セットのカスタマイズ
+
+`config/permissions.py` の `PermissionManager.PERMISSION_SETS` を編集して、独自の権限セットを定義できます。
+
+### ログ機能の拡張
+
+`cogs/logging.py` に新しいイベントリスナーを追加して、監視対象を拡張できます。
 
 ## 🤝 コントリビュート (Contributing)
 
@@ -147,6 +244,23 @@ logging:
 
 このプロジェクトはMITライセンスの下で公開されています。詳細は `LICENSE` ファイルをご覧ください。
 
------
+## 🆘 サポート (Support)
+
+- **バグ報告**: [GitHub Issues](https://github.com/anker12345/discord-managementpbot/issues)
+- **機能要望**: [GitHub Issues](https://github.com/anker12345/discord-managementpbot/issues)
+- **質問**: [GitHub Discussions](https://github.com/anker12345/discord-managementpbot/discussions)
+
+## 📝 更新履歴 (Changelog)
+
+### v1.0.0
+- 初回リリース
+- YAMLベースのサーバー構築機能
+- 2階層ロール管理システム
+- リアクションロール機能
+- ウェルカムゲート機能
+- 監査ログ機能
+- テンプレート機能
+
+---
 
 *This README was generated based on a collaborative requirements definition process.*

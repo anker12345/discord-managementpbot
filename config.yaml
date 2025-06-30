@@ -1,0 +1,99 @@
+# サーバー名（ドキュメント用）
+server_name: "New Community Server"
+
+# 基幹ロール（権限を持つロール）の一覧
+roles:
+  - name: "👑運営"
+    color: "#e67e22"
+    permission_set: "administrator"
+  - name: "🛡️モデレーター"
+    color: "#3498db"
+    permission_set: "moderator"
+  - name: "🗣️メンバー"
+    color: "#2ecc71"
+    permission_set: "member"
+  - name: "🔒未認証"
+    color: "#7f8c8d"
+    permission_set: "muted"
+
+# チャンネルとカテゴリの一覧
+channels:
+  - category: "ようこそ"
+    items:
+      - name: "📜はじめに"
+        type: "text"
+        permissions:
+          - role: "🔒未認証"
+            allow: ["view_channel", "read_message_history"]
+          - role: "@everyone"
+            deny: ["view_channel"]
+      - name: "ロール選択"
+        type: "text"
+        permissions:
+          - role: "🗣️メンバー"
+            allow: ["view_channel", "read_message_history"]
+          - role: "@everyone"
+            deny: ["view_channel"]
+  
+  - category: "一般"
+    items:
+      - name: "💬雑談"
+        type: "text"
+        permissions:
+          - role: "🗣️メンバー"
+            allow: ["view_channel", "send_messages", "read_message_history"]
+      - name: "🎮ゲーム"
+        type: "text"
+      - name: "📺メディア"
+        type: "text"
+      - name: "🔊ボイスチャット"
+        type: "voice"
+  
+  - category: "管理"
+    items:
+      - name: "📋監査ログ"
+        type: "text"
+        permissions:
+          - role: "🛡️モデレーター"
+            allow: ["view_channel", "read_message_history"]
+          - role: "@everyone"
+            deny: ["view_channel"]
+      - name: "🔧運営専用"
+        type: "text"
+        permissions:
+          - role: "👑運営"
+            allow: ["view_channel", "send_messages", "read_message_history", "manage_messages"]
+          - role: "@everyone"
+            deny: ["view_channel"]
+
+# ウェルカムゲート機能の設定
+welcome_gate:
+  enabled: true
+  channel: "📜はじめに"
+  initial_role: "🔒未認証"
+  final_role: "🗣️メンバー"
+  message: |
+    ## 🎉 サーバーへようこそ！
+    
+    このサーバーのルールをよく読み、同意される方は下の「✅同意する」ボタンを押してください。
+    
+    **サーバールール:**
+    1. 他のメンバーを尊重し、礼儀正しく接してください
+    2. スパムや荒らし行為は禁止です
+    3. 適切なチャンネルで発言してください
+    4. NSFWコンテンツは専用チャンネルでのみ共有してください
+    
+    ルールに同意していただければ、サーバーの全機能をお楽しみいただけます！
+
+# ログ機能の設定
+logging:
+  enabled: true
+  log_channel: "📋監査ログ"
+  auto_delete_days: 7 # 7日経過したログは自動削除
+  events:
+    - "message_delete"
+    - "message_edit"
+    - "member_join"
+    - "member_leave"
+    - "member_update"
+    - "role_update"

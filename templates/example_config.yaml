@@ -1,0 +1,177 @@
+# サーバー名（ドキュメント用）
+server_name: "Example Community Server"
+
+# 基幹ロール（権限を持つロール）の一覧
+roles:
+  - name: "👑オーナー"
+    color: "#ff0000"
+    permission_set: "administrator"
+  - name: "🛡️管理者"
+    color: "#e67e22"
+    permission_set: "administrator"
+  - name: "🔨モデレーター"
+    color: "#3498db"
+    permission_set: "moderator"
+  - name: "🎯VIP"
+    color: "#9b59b6"
+    permission_set: "member"
+  - name: "🗣️メンバー"
+    color: "#2ecc71"
+    permission_set: "member"
+  - name: "🔒未認証"
+    color: "#7f8c8d"
+    permission_set: "muted"
+
+# チャンネルとカテゴリの一覧
+channels:
+  - category: "📋 案内"
+    items:
+      - name: "📜規約・ルール"
+        type: "text"
+        permissions:
+          - role: "🔒未認証"
+            allow: ["view_channel", "read_message_history"]
+          - role: "@everyone"
+            deny: ["view_channel"]
+      - name: "📢お知らせ"
+        type: "text"
+        permissions:
+          - role: "🗣️メンバー"
+            allow: ["view_channel", "read_message_history"]
+            deny: ["send_messages"]
+          - role: "🔨モデレーター"
+            allow: ["view_channel", "send_messages", "manage_messages"]
+      - name: "🎭ロール選択"
+        type: "text"
+        permissions:
+          - role: "🗣️メンバー"
+            allow: ["view_channel", "read_message_history", "add_reactions"]
+            deny: ["send_messages"]
+
+  - category: "💬 一般チャット"
+    items:
+      - name: "💬雑談"
+        type: "text"
+        permissions:
+          - role: "🗣️メンバー"
+            allow: ["view_channel", "send_messages", "read_message_history", "embed_links", "attach_files", "add_reactions", "use_external_emojis"]
+      - name: "🎮ゲーム"
+        type: "text"
+      - name: "🎨クリエイティブ"
+        type: "text"
+      - name: "📰ニュース"
+        type: "text"
+      - name: "🤖bot-コマンド"
+        type: "text"
+        permissions:
+          - role: "🗣️メンバー"
+            allow: ["view_channel", "send_messages", "read_message_history", "use_external_emojis"]
+
+  - category: "🔊 ボイスチャンネル"
+    items:
+      - name: "🔊一般ボイス"
+        type: "voice"
+        permissions:
+          - role: "🗣️メンバー"
+            allow: ["view_channel", "connect", "speak", "use_voice_activation"]
+      - name: "🎵音楽ボイス"
+        type: "voice"
+      - name: "🎮ゲームボイス"
+        type: "voice"
+      - name: "📚勉強・作業"
+        type: "voice"
+
+  - category: "🔒 VIP専用"
+    items:
+      - name: "💎vip-チャット"
+        type: "text"
+        permissions:
+          - role: "🎯VIP"
+            allow: ["view_channel", "send_messages", "read_message_history", "embed_links", "attach_files"]
+          - role: "@everyone"
+            deny: ["view_channel"]
+      - name: "💎vip-ボイス"
+        type: "voice"
+        permissions:
+          - role: "🎯VIP"
+            allow: ["view_channel", "connect", "speak", "use_voice_activation"]
+          - role: "@everyone"
+            deny: ["view_channel"]
+
+  - category: "🛠️ 管理"
+    items:
+      - name: "📋監査ログ"
+        type: "text"
+        permissions:
+          - role: "🔨モデレーター"
+            allow: ["view_channel", "read_message_history"]
+          - role: "@everyone"
+            deny: ["view_channel"]
+      - name: "🔧スタッフ専用"
+        type: "text"
+        permissions:
+          - role: "🔨モデレーター"
+            allow: ["view_channel", "send_messages", "read_message_history", "manage_messages"]
+          - role: "@everyone"
+            deny: ["view_channel"]
+      - name: "🏛️管理者専用"
+        type: "text"
+        permissions:
+          - role: "🛡️管理者"
+            allow: ["view_channel", "send_messages", "read_message_history", "manage_messages"]
+          - role: "@everyone"
+            deny: ["view_channel"]
+      - name: "🔊スタッフボイス"
+        type: "voice"
+        permissions:
+          - role: "🔨モデレーター"
+            allow: ["view_channel", "connect", "speak", "use_voice_activation"]
+          - role: "@everyone"
+            deny: ["view_channel"]
+
+# ウェルカムゲート機能の設定
+welcome_gate:
+  enabled: true
+  channel: "📜規約・ルール"
+  initial_role: "🔒未認証"
+  final_role: "🗣️メンバー"
+  message: |
+    ## 🎉 サーバーへようこそ！
+    
+    **このサーバーは皆が楽しく過ごせるコミュニティを目指しています。**
+    
+    ### 📋 基本ルール
+    1. **相互尊重**: すべてのメンバーを尊重し、礼儀正しく接してください
+    2. **スパム禁止**: 連続投稿や無意味な投稿は控えてください
+    3. **適切なチャンネル使用**: 話題に適したチャンネルで発言してください
+    4. **NSFW規制**: 成人向けコンテンツの共有は禁止です
+    5. **プライバシー尊重**: 他人の個人情報を無断で共有しないでください
+    6. **建設的な議論**: 健全で建設的な会話を心がけてください
+    
+    ### 🎭 ロールについて
+    - **🗣️メンバー**: 基本的なチャンネルにアクセスできます
+    - **🎯VIP**: 特別なVIP専用チャンネルにアクセスできます
+    - **🔨モデレーター**: サーバーの秩序維持を担当します
+    - **🛡️管理者**: サーバー運営を行います
+    
+    ### 🎮 機能について
+    - **リアクションロール**: 🎭ロール選択チャンネルで興味のあるロールを取得できます
+    - **ボイスチャンネル**: 様々な用途のボイスチャンネルをご利用ください
+    - **Bot機能**: 便利なBotコマンドを🤖bot-コマンドチャンネルで使用できます
+    
+    **上記のルールに同意し、楽しいコミュニティライフを送る準備ができましたら、下の「✅同意する」ボタンを押してください！**
+    
+    何か質問があれば、いつでもスタッフにお声かけください。皆様のご参加をお待ちしています！ 🌟
+
+# ログ機能の設定
+logging:
+  enabled: true
+  log_channel: "📋監査ログ"
+  auto_delete_days: 14 # 14日経過したログは自動削除
+  events:
+    - "message_delete"
+    - "message_edit"
+    - "member_join"
+    - "member_leave"
+    - "member_update"
+    - "role_update"
