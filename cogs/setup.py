@@ -1,14 +1,17 @@
 """
-サーバーセットアップ機能のCog
+サーバーセットアップ機能のCog（ファイルアップロード対応版）
 """
 
 import discord
 from discord.ext import commands
 from discord import app_commands
 from typing import Dict, Any, List, Optional
+import yaml
+import io
 
 from config.permissions import PermissionManager
 from utils.helpers import parse_color, find_role_by_name, find_category_by_name, clean_channel_name, create_embed
+from utils.validators import validate_yaml_config
 from utils.logger import get_logger
 
 class SetupCog(commands.Cog):
@@ -23,7 +26,7 @@ class SetupCog(commands.Cog):
         force="既存のチャンネル・ロールを削除して再構築するかどうか"
     )
     async def setup_server(self, interaction: discord.Interaction, force: bool = False):
-        """サーバーセットアップコマンド"""
+        """サーバーセットアップコマンド（既存のファイルベース）"""
         
         # 管理者権限チェック
         if not interaction.user.guild_permissions.administrator:
@@ -45,29 +48,8 @@ class SetupCog(commands.Cog):
             )
             await interaction.followup.send(embed=embed)
             
-            # ロールの作成
-            created_roles = await self._setup_roles(interaction.guild, config.get('roles', []), force)
-            
-            # チャンネルの作成
-            created_channels = await self._setup_channels(interaction.guild, config.get('channels', []), created_roles, force)
-            
-            # ウェルカムゲートの設定
-            if config.get('welcome_gate', {}).get('enabled'):
-                await self._setup_welcome_gate(interaction.guild, config['welcome_gate'])
-            
-            # 完了メッセージ
-            embed = create_embed(
-                title="✅ サーバーセットアップ完了",
-                description=f"サーバー「{config.get('server_name', interaction.guild.name)}」のセットアップが完了しました。",
-                color=discord.Color.green(),
-                fields=[
-                    {"name": "作成されたロール", "value": f"{len(created_roles)}個", "inline": True},
-                    {"name": "作成されたチャンネル", "value": f"{len(created_channels)}個", "inline": True}
-                ]
-            )
-            
-            await interaction.followup.send(embed=embed)
-            self.logger.info(f"サーバーセットアップ完了: {interaction.guild.name}")
+            # セットアップ実行
+            await self._execute_setup(interaction, config, force)
             
         except Exception as e:
             self.logger.error(f"セットアップエラー: {e}")
@@ -78,6 +60,196 @@ class SetupCog(commands.Cog):
                 color=discord.Color.red()
             )
             await interaction.followup.send(embed=embed)
+    
+    @app_commands.command(name="setup_file", description="アップロードしたYAMLファイルに基づいてサーバーを構築します")
+    @app_commands.describe(
+        config_file="サーバー設定のYAMLファイル",
+        force="既存のチャンネル・ロールを削除して再構築するかどうか"
+    )
+    async def setup_from_file(self, interaction: discord.Interaction, 
+                             config_file: discord.Attachment, force: bool = False):
+        """ファイルアップロードによるサーバーセットアップコマンド"""
+        
+        # 管理者権限チェック
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.response.send_message(
+                "❌ このコマンドを実行するには管理者権限が必要です。",
+                ephemeral=True
+            )
+            return
+        
+        await interaction.response.defer()
+        
+        try:
+            # ファイル形式チェック
+            if not config_file.filename.endswith(('.yaml', '.yml')):
+                await interaction.followup.send(
+                    "❌ YAMLファイル（.yaml または .yml）をアップロードしてください。",
+                    ephemeral=True
+                )
+                return
+            
+            # ファイルサイズチェック（1MB制限）
+            if config_file.size > 1024 * 1024:
+                await interaction.followup.send(
+                    "❌ ファイルサイズが大きすぎます（1MB以下にしてください）。",
+                    ephemeral=True
+                )
+                return
+            
+            # ファイル読み込み
+            file_content = await config_file.read()
+            
+            try:
+                # YAMLとして解析
+                config_data = yaml.safe_load(file_content.decode('utf-8'))
+            except yaml.YAMLError as e:
+                await interaction.followup.send(
+                    f"❌ YAMLファイルの解析に失敗しました:\n```{str(e)}```",
+                    ephemeral=True
+                )
+                return
+            except UnicodeDecodeError:
+                await interaction.followup.send(
+                    "❌ ファイルの文字エンコーディングが不正です。UTF-8で保存してください。",
+                    ephemeral=True
+                )
+                return
+            
+            # 設定ファイルの妥当性チェック
+            is_valid, errors = validate_yaml_config(config_data)
+            if not is_valid:
+                error_text = "\n".join([f"• {error}" for error in errors[:10]])  # 最大10個まで表示
+                await interaction.followup.send(
+                    f"❌ 設定ファイルに問題があります:\n```{error_text}```",
+                    ephemeral=True
+                )
+                return
+            
+            # セットアップ開始メッセージ
+            embed = create_embed(
+                title="🛠️ ファイルからのサーバーセットアップ開始",
+                description=f"アップロードされた設定ファイル `{config_file.filename}` に基づいてサーバーを構築中...",
+                color=discord.Color.blue(),
+                fields=[
+                    {"name": "サーバー名", "value": config_data.get('server_name', '未設定'), "inline": True},
+                    {"name": "ロール数", "value": f"{len(config_data.get('roles', []))}個", "inline": True},
+                    {"name": "カテゴリ数", "value": f"{len(config_data.get('channels', []))}個", "inline": True}
+                ]
+            )
+            await interaction.followup.send(embed=embed)
+            
+            # セットアップ実行
+            await self._execute_setup(interaction, config_data, force)
+            
+        except Exception as e:
+            self.logger.error(f"ファイルセットアップエラー: {e}")
+            
+            embed = create_embed(
+                title="❌ ファイルセットアップエラー",
+                description=f"ファイルからのセットアップ中にエラーが発生しました:\n```{str(e)}```",
+                color=discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed)
+    
+    @app_commands.command(name="validate_config", description="アップロードしたYAMLファイルの妥当性をチェックします")
+    @app_commands.describe(
+        config_file="チェックするYAMLファイル"
+    )
+    async def validate_config_file(self, interaction: discord.Interaction, 
+                                  config_file: discord.Attachment):
+        """設定ファイルの妥当性チェック"""
+        
+        await interaction.response.defer(ephemeral=True)
+        
+        try:
+            # ファイル形式チェック
+            if not config_file.filename.endswith(('.yaml', '.yml')):
+                await interaction.followup.send(
+                    "❌ YAMLファイル（.yaml または .yml）をアップロードしてください。",
+                    ephemeral=True
+                )
+                return
+            
+            # ファイル読み込み
+            file_content = await config_file.read()
+            
+            try:
+                # YAMLとして解析
+                config_data = yaml.safe_load(file_content.decode('utf-8'))
+            except yaml.YAMLError as e:
+                await interaction.followup.send(
+                    f"❌ YAMLファイルの解析に失敗しました:\n```{str(e)}```",
+                    ephemeral=True
+                )
+                return
+            except UnicodeDecodeError:
+                await interaction.followup.send(
+                    "❌ ファイルの文字エンコーディングが不正です。UTF-8で保存してください。",
+                    ephemeral=True
+                )
+                return
+            
+            # 設定ファイルの妥当性チェック
+            is_valid, errors = validate_yaml_config(config_data)
+            
+            if is_valid:
+                embed = create_embed(
+                    title="✅ 設定ファイルチェック完了",
+                    description=f"`{config_file.filename}` は有効な設定ファイルです。",
+                    color=discord.Color.green(),
+                    fields=[
+                        {"name": "サーバー名", "value": config_data.get('server_name', '未設定'), "inline": True},
+                        {"name": "ロール数", "value": f"{len(config_data.get('roles', []))}個", "inline": True},
+                        {"name": "カテゴリ数", "value": f"{len(config_data.get('channels', []))}個", "inline": True},
+                        {"name": "ウェルカムゲート", "value": "有効" if config_data.get('welcome_gate', {}).get('enabled') else "無効", "inline": True},
+                        {"name": "ログ機能", "value": "有効" if config_data.get('logging', {}).get('enabled') else "無効", "inline": True}
+                    ]
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+            else:
+                error_text = "\n".join([f"• {error}" for error in errors])
+                embed = create_embed(
+                    title="❌ 設定ファイルに問題があります",
+                    description=f"```{error_text}```",
+                    color=discord.Color.red()
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                
+        except Exception as e:
+            self.logger.error(f"設定ファイルチェックエラー: {e}")
+            await interaction.followup.send(
+                f"❌ ファイルチェック中にエラーが発生しました: {str(e)}",
+                ephemeral=True
+            )
+    
+    async def _execute_setup(self, interaction: discord.Interaction, config: Dict[str, Any], force: bool):
+        """セットアップの実行（共通処理）"""
+        
+        # ロールの作成
+        created_roles = await self._setup_roles(interaction.guild, config.get('roles', []), force)
+        
+        # チャンネルの作成
+        created_channels = await self._setup_channels(interaction.guild, config.get('channels', []), created_roles, force)
+        
+        # ウェルカムゲートの設定
+        if config.get('welcome_gate', {}).get('enabled'):
+            await self._setup_welcome_gate(interaction.guild, config['welcome_gate'])
+        
+        # 完了メッセージ
+        embed = create_embed(
+            title="✅ サーバーセットアップ完了",
+            description=f"サーバー「{config.get('server_name', interaction.guild.name)}」のセットアップが完了しました。",
+            color=discord.Color.green(),
+            fields=[
+                {"name": "作成されたロール", "value": f"{len(created_roles)}個", "inline": True},
+                {"name": "作成されたチャンネル", "value": f"{len(created_channels)}個", "inline": True},
+                {"name": "ウェルカムゲート", "value": "設定済み" if config.get('welcome_gate', {}).get('enabled') else "無効", "inline": True}
+            ]
+        )
+        
+        await interaction.followup.send(embed=embed)
+        self.logger.info(f"サーバーセットアップ完了: {interaction.guild.name} by {interaction.user}")
     
     async def _setup_roles(self, guild: discord.Guild, roles_config: List[Dict], force: bool) -> Dict[str, discord.Role]:
         """ロールのセットアップ"""
