@@ -48,4 +48,18 @@ Thumbs.db
 
 # Temporary files
 *.tmp
-*.temp
+*.temp# Docker files (local only)
+.dockerignore
+Dockerfile
+docker-compose.yml
+data/
+logs/
+
+# Docker files (local deployment)
+.dockerignore
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+
+# Runtime data
+data/
